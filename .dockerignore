@@ -1,0 +1,8 @@
+.git
+.github
+.venv
+**/__pycache__
+*.tar.gz
+docs
+results
+models

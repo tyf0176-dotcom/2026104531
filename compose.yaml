@@ -1,0 +1,9 @@
+services:
+  lab:
+    image: cpu-file-retrieval-lab:2.0
+    build: .
+    cpus: 4.0
+    network_mode: none
+    volumes:
+      - ./indexes:/lab/indexes:ro
+      - ./results:/lab/results

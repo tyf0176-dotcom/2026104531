@@ -1,0 +1,1 @@
+{"stage": "document_embedding", "chunks": 8045, "dimensions": 384, "batch_size": 32, "threads": 4, "doc_embed_s": 47.966018040984636, "where": "host python3.13 / torch 2.9.1 / M5 4-thread"}

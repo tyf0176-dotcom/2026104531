@@ -1,0 +1,1 @@
+{"type": "summary", "mode": "search", "index": "exact", "split": "dev", "build": {}, "search": {}, "build_ms": 0.000458, "queries": 10, "repetitions": 3, "ann_recall10": 1.0, "file_hit5": 0.4000000000000001, "search_p50_ms": 0.333646, "search_p95_ms": 0.35394375, "index_bytes": 0, "host": "darwin-arm64-host"}

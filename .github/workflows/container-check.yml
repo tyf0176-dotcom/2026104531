@@ -1,0 +1,74 @@
+name: Release classroom images
+on:
+  push:
+    tags: ['lab-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" || gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "文件检索实验 · ${GITHUB_REF_NAME}" --notes "选择与 Docker CPU 架构相同的归档，用 docker load -i 导入。每个镜像已包含模型权重、数据、查询与评测程序。作业要求见课程仓库首页。"
+  verify:
+    needs: draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, arch: amd64 }
+          - { runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - run: docker compose build lab
+      - name: Verify the student workflow offline with 4 vCPU and 4 GiB
+        run: |
+          cat > compose.override.yaml <<'YAML'
+          services:
+            lab:
+              mem_limit: 4g
+              memswap_limit: 4g
+          YAML
+          docker compose up --no-build --wait
+          docker inspect --format '{{.HostConfig.NetworkMode}} {{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}' "$(docker compose ps -q lab)" | grep -Fx "none 4000000000 4294967296"
+          docker compose exec -T lab bench search exact --split dev > dev.json
+          docker compose exec -T lab bench search exact --split test > test.json
+          docker compose exec -T lab bench online exact --split test > online.jsonl
+          docker compose exec -T lab bench embed > embed.json
+          python - <<'PY'
+          import json, math
+          for name, n, hit in [('dev', 10, .4), ('test', 40, .425)]:
+              r = json.load(open(name+'.json'))
+              assert r['queries'] == n and r['ann_recall10'] == 1 and math.isclose(r['file_hit5'],hit)
+          rows = [json.loads(line) for line in open('online.jsonl')]
+          assert len(rows) == 4 and all(r['tokens'] and r['llm_ms'] and r['embed_ms'] for r in rows[:3])
+          emb = json.load(open('embed.json'))
+          assert emb['chunks'] == 8045 and emb['dimensions'] == 384 and emb['doc_embed_s'] > 0
+          PY
+          docker compose down
+      - name: Upload architecture-specific image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          archive="file-retrieval-lab-${ARCH}.tar.gz"
+          docker save cpu-file-retrieval-lab:2.0 | gzip -1 > "$archive"
+          sha256sum "$archive" > "$archive.sha256"
+          gh release upload "$GITHUB_REF_NAME" "$archive" "$archive.sha256" --clobber
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest

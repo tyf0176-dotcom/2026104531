@@ -29,7 +29,7 @@
 | 嵌入模型 | `sentence-transformers/all-MiniLM-L6-v2`，revision `c9745ed1` |
 | 生成模型 | `Qwen2.5-0.5B-Instruct-Q4_K_M`，sha256 校验通过（`74a4da8c…a7a9db4`） |
 | 评测逻辑 | `benchmark/runner.py`（与 `bench` 命令同一份代码） |
-| 代码提交号 | `__COMMIT__`（本报告对应的实现与结果所在提交） |
+| 代码提交号 | `cf84ef0`（本报告对应的实现与结果所在提交） |
 | 测量脚本 | `tools/offline_bench.py`（ANN 指标）、`benchmark/encode.py`、`benchmark/runner.py online` |
 
 **关于测量路径的说明（重要）**：我的开发机没有安装 Docker（也无 Xcode 命令行工具可编译），无法启动课程容器。为了拿到真实数字而不是估算，我按下列方式采集，全部为实测、无拟合：

@@ -27,7 +27,7 @@
 | 线程设置 | `LAB_BLAS_THREADS=1`（NumPy/BLAS 单线程）、`LAB_MODEL_THREADS=4`（编码器） |
 | Python / 依赖 | 容器：Python 3.11 + `docker/framework-lock.txt`（numpy 1.26.4、torch 2.9.1-cpu、transformers 5.3.0、langgraph 1.0.10） |
 | 嵌入模型 | `sentence-transformers/all-MiniLM-L6-v2`，revision `c9745ed1` |
-| 生成模型 | `Qwen2.5-0.5B-Instruct-Q4_K_M`，sha256 校验通过（`74a4da8c…a7a9db4`） |
+| 生成模型 | `Qwen2.5-0.5B-Instruct-Q4_K_M`，sha256 校验通过（`74a4da8c…93d7a9db`） |
 | 评测逻辑 | `benchmark/runner.py`（与 `bench` 命令同一份代码） |
 | 代码提交号 | `cf84ef0`（本报告对应的实现与结果所在提交） |
 | 测量脚本 | `tools/offline_bench.py`（ANN 指标）、`benchmark/encode.py`、`benchmark/runner.py online` |
@@ -273,7 +273,7 @@
 | IVF-Flat 建库（k-means + 分簇，`nlist=64`） | 1.10 s | 嵌入的 2.3% |
 | HNSW 建库（`M=16, efC=100`） | 12.59 s | 嵌入的 26.2% |
 
-即：**离线成本由嵌入主导**（IVF 路线 97.7%，HNSW 路线 79.3%），把索引从 IVF 换成 HNSW 只让离线总时长多 24%。
+即：**离线成本由嵌入主导**（IVF 路线 97.7%，HNSW 路线 79.2%），把索引从 IVF 换成 HNSW 只让离线总时长多 23%。
 
 **在线**（测试集固定的 3 条查询，P50，详见表格最后一段）：
 
@@ -285,8 +285,8 @@
 | IVF-Flat `nprobe=64` | 12.3 ms | 0.40 ms | 201 ms | 214 ms |
 | IVF-PQ 8bit `nprobe=8` | 12.0 ms | 0.28 ms | 454 ms | 467 ms |
 
-- **占比**（以 IVF-Flat `nprobe=16` 为例）：生成 94.0%、查询嵌入 5.6%、ANN 检索 0.08%、LangGraph 框架与文件聚合 0.4%。检索那一段连 1 ms 都不到，把 `nprobe` 从 16 提到 64（候选多 4 倍）只让端到端多 0.2 ms。
-- **生成耗时的决定因素**：输出 22/28/37 个 token 分别耗时 157/201/265 ms，斜率 7.1 ms/token（约 **140 token/s**），截距约 2 ms。换句话说 `llm_ms` 基本只由**输出 token 数**决定，与检索配置无关。
+- **占比**（以 IVF-Flat `nprobe=16` 为例）：生成 94.0%、查询嵌入 5.6%、ANN 检索 0.08%、LangGraph 框架与文件聚合 0.4%。检索那一段连 1 ms 都不到，把 `nprobe` 从 16 提到 64（候选多 4 倍）只让检索段多 0.23 ms，端到端 P50 没有可见变化。
+- **生成耗时的决定因素**：输出 22/28/37 个 token 分别耗时 157/201/265 ms，斜率约 7.2 ms/token（约 **140 token/s**），几乎不含固定开销。换句话说 `llm_ms` 基本只由**输出 token 数**决定，与检索配置无关。
 - **PQ 那一行 454 ms 不是检索变慢**，而是它返回的片段不同，模型多写了 token（39/29/32 对 22/28/37），这正好说明"比较生成耗时要同时列 token 数"的必要性。
 
 ---

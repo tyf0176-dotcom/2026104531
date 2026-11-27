@@ -1,0 +1,9 @@
+{"type": "index_size", "index": "graph", "build": {"M": 8, "efConstruction": 100}, "build_ms_ms": 5844.3, "index_bytes": 495356}
+{"type": "index_size", "index": "graph", "build": {"M": 16, "efConstruction": 100}, "build_ms_ms": 12491.1, "index_bytes": 915408}
+{"type": "index_size", "index": "graph", "build": {"M": 16, "efConstruction": 200}, "build_ms_ms": 19373.8, "index_bytes": 921452}
+{"type": "index_size", "index": "cluster", "build": {"nlist": 32, "nbits": 0}, "build_ms_ms": 1130.1, "index_bytes": 12438716}
+{"type": "index_size", "index": "cluster", "build": {"nlist": 64, "nbits": 0}, "build_ms_ms": 1178.6, "index_bytes": 12488124}
+{"type": "index_size", "index": "cluster", "build": {"nlist": 128, "nbits": 0}, "build_ms_ms": 1270.3, "index_bytes": 12586940}
+{"type": "index_size", "index": "cluster", "build": {"nlist": 64, "nbits": 4, "m": 16}, "build_ms_ms": 2498.0, "index_bytes": 284300}
+{"type": "index_size", "index": "cluster", "build": {"nlist": 64, "nbits": 8, "m": 16}, "build_ms_ms": 4074.1, "index_bytes": 652940}
+{"type": "index_size", "index": "cluster", "build": {"nlist": 64, "nbits": 8, "m": 48}, "build_ms_ms": 6741.4, "index_bytes": 910380}

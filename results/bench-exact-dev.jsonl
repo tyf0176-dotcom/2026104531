@@ -1,0 +1,1 @@
+{"type": "summary", "mode": "search", "index": "exact", "split": "dev", "build": {}, "search": {}, "build_ms": 0.00075, "queries": 10, "repetitions": 3, "ann_recall10": 1.0, "file_hit5": 0.4000000000000001, "search_p50_ms": 0.5224789999999999, "search_p95_ms": 0.6396103, "workflow_p50_ms": 0.8298125}

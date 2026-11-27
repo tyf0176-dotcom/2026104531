@@ -1,4 +1,4 @@
-"""Rebuild the report tables and figures from results/*.jsonl.
+"""Rebuild the report tables and figures from results/bench-*.jsonl.
 
     python tools/make_report.py
 
@@ -19,13 +19,22 @@ ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
 
 
+def read_rows(path):
+    """Yield JSON records, skipping any non-JSON noise (stderr, warnings)."""
+    for line in path.read_text(encoding="utf8").splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            yield json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+
 def load():
     rows = []
     for path in sorted(RESULTS.glob("*.jsonl")):
-        for line in path.read_text(encoding="utf8").splitlines():
-            if not line.strip():
-                continue
-            row = json.loads(line)
+        for row in read_rows(path):
             if row.get("type") != "summary":
                 continue
             row["_file"] = path.name
@@ -54,12 +63,26 @@ def knobs(row):
     return "nprobe={}".format(search.get("nprobe"))
 
 
+def load_index_sizes():
+    """Map (index, build params) -> index_bytes, measured separately in the container."""
+    sizes = {}
+    path = RESULTS / "bench-index-size.jsonl"
+    if not path.exists():
+        return sizes
+    for row in read_rows(path):
+        key = (row["index"], json.dumps(row["build"], sort_keys=True))
+        sizes[key] = row["index_bytes"]
+    return sizes
+
+
 def table(rows, title):
     head = ("| 配置 | 查询参数 | 建库耗时 (ms) | 索引额外空间 | Recall@10 | Hit@5 | 查询 P50 (ms) | 查询 P95 (ms) |\n"
             "|---|---|---:|---:|---:|---:|---:|---:|\n")
     body = ""
+    sizes = load_index_sizes()
     for r in sorted(rows, key=lambda r: (label(r), r["search_p50_ms"])):
-        size = r.get("index_bytes", 0)
+        key = (r["index"], json.dumps(r["build"], sort_keys=True))
+        size = r.get("index_bytes") or sizes.get(key, 0)
         if size == 0:
             space = "—"
         elif size < 1024 * 1024:
@@ -144,12 +167,9 @@ def zoom(rows, path):
 
 def load_online():
     rows = []
-    for path in sorted(RESULTS.glob("online-*.jsonl")):
+    for path in sorted(RESULTS.glob("bench-online-*.jsonl")):
         tokens = []
-        for line in path.read_text(encoding="utf8").splitlines():
-            if not line.strip():
-                continue
-            row = json.loads(line)
+        for row in read_rows(path):
             if row.get("type") == "query":
                 tokens.append(row["tokens"])
             elif row.get("type") == "summary":
@@ -159,11 +179,16 @@ def load_online():
     return rows
 
 
+def online_order(rows):
+    rank = {"exact": 0, "graph": 1, "cluster": 2}
+    return sorted(rows, key=lambda r: (rank.get(r["index"], 9), label(r), r["search_p50_ms"]))
+
+
 def online_table(rows):
     head = ("| 配置 | 查询参数 | 查询嵌入 (ms) | ANN 检索 (ms) | 生成 (ms) | 完整请求 (ms) | 框架/聚合 (ms) | 输出 token |\n"
             "|---|---|---:|---:|---:|---:|---:|---|\n")
     body = ""
-    for r in rows:
+    for r in online_order(rows):
         embed, search, llm, flow = r["embed_p50_ms"], r["search_p50_ms"], r["llm_p50_ms"], r["workflow_p50_ms"]
         body += "| {} | {} | {:.1f} | {:.2f} | {:.0f} | {:.0f} | {:.1f} | {} |\n".format(
             label(r), knobs(r) if r["index"] != "exact" else "—", embed, search, llm, flow,
@@ -171,9 +196,22 @@ def online_table(rows):
     return head + body
 
 
+def short_label(row):
+    b, q = row["build"], row["search"]
+    if row["index"] == "exact":
+        return "exact\nfull scan"
+    if row["index"] == "graph":
+        return "HNSW\nef={}".format(q.get("efSearch"))
+    if b.get("nbits", 0) == 0:
+        return "IVF-Flat K={}\nnprobe={}".format(b.get("nlist"), q.get("nprobe"))
+    return "IVF-PQ {0}bit m={1}\nnprobe={2}".format(b.get("nbits"), b.get("m"), q.get("nprobe"))
+
+
 def online_bars(rows, path):
-    fig, ax = plt.subplots(figsize=(7.4, 3.8), dpi=160)
-    names = [label(r) + "\n" + (knobs(r) if r["index"] != "exact" else "full scan") for r in rows]
+    fig, ax = plt.subplots(figsize=(7.6, 4.0), dpi=160)
+    rows = online_order(rows)
+    names = [short_label(r) for r in rows]
+    rows = online_order(rows)
     embed = [r["embed_p50_ms"] for r in rows]
     search = [r["search_p50_ms"] for r in rows]
     llm = [r["llm_p50_ms"] for r in rows]
@@ -186,7 +224,7 @@ def online_bars(rows, path):
     base2 = [b + l for b, l in zip(base, llm)]
     ax.bar(idx, other, bottom=base2, label="framework", color="#bfbfbf")
     ax.set_xticks(list(idx))
-    ax.set_xticklabels(names, fontsize=6, rotation=18, ha="right")
+    ax.set_xticklabels(names, fontsize=6.5, rotation=0, ha="center")
     ax.set_ylabel("latency per request (ms, p50)")
     ax.set_title("Online RAG breakdown, 3 fixed test queries")
     ax.legend(fontsize=8)

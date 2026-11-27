@@ -1,0 +1,1 @@
+{"stage": "document_embedding", "chunks": 8045, "dimensions": 384, "batch_size": 32, "threads": 4, "doc_embed_s": 330.4116099849998}

@@ -30,7 +30,7 @@
 | 嵌入模型 | `sentence-transformers/all-MiniLM-L6-v2`，revision `c9745ed1` |
 | 生成模型 | `Qwen2.5-0.5B-Instruct-Q4_K_M`，sha256 校验通过（`74a4da8c…93d7a9db`） |
 | 评测逻辑 | `benchmark/runner.py`（与 `bench` 命令同一份代码） |
-| 代码提交号 | `__COMMIT__`（本报告对应的实现与结果所在提交） |
+| 代码提交号 | `edbc974`（本报告对应的实现与结果所在提交） |
 | 测量方式 | 容器内 `bench search` / `bench online` / `bench embed`，原始输出在 `results/bench-*.jsonl` |
 
 **关于镜像构建的说明（如实披露）**：本机对几个构建依赖站点不可达或限速严重 —— `deb.debian.org` 的 `binary-arm64/Packages` 反复 `Connection failed`，`files.pythonhosted.org` 读超时，`download.pytorch.org` 实测只有 0.01 MB/s（5 MB 用了 460 秒）。因此我用了一份**仓库外的本地 Dockerfile 副本**构建镜像，改动仅三处且不涉及任何业务代码：
